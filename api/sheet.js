@@ -2,6 +2,8 @@
 // Example: /api/sheet?tab=buffett&tickers=NVDA,AMD,MU
 import { fundamentals, recent8K, insiderActivity, findTags, COMPANIES } from "../lib/sec.js";
 import { buffett, graham, piotroski, DEFAULTS } from "../lib/calc.js";
+import { headlines, redditPosts } from "../lib/news.js";
+import { resolveCompany } from "../lib/sec.js";
 
 const cell = (x) => {
   if (x === null || x === undefined) return "";
@@ -53,6 +55,33 @@ const builders = {
       const n = await safe(() => recent8K(t));
       if (!n.filings?.length) rows.push([t, "", "", "", "", "", "no data", n.gap]);
       for (const f of n.filings || []) rows.push([t, f.filed, "8-K", f.itemNames, f.itemCodes, f.sourceUrl, "ok", ""]);
+    }
+    return rows;
+  },
+  async headlines(tickers) {
+    const rows = [["ticker", "headline", "publisher", "published", "source_url", "status", "data_gap"]];
+    for (const t of tickers) {
+      try {
+        const co = await resolveCompany(t);
+        const list = await headlines(t, co?.name);
+        if (!list.length) rows.push([t, "", "", "", "", "no data", "No headlines in the last 7 days."]);
+        for (const h of list) rows.push([t, h.title, h.publisher || h.source, h.published, h.url, "ok", ""]);
+      } catch (err) {
+        rows.push([t, "", "", "", "", "no data", `Could not reach the source: ${err.message}`]);
+      }
+    }
+    return rows;
+  },
+  async reddit(tickers) {
+    const rows = [["ticker", "post_title", "subreddit", "upvotes", "comments", "published", "source_url", "status", "data_gap"]];
+    for (const t of tickers) {
+      try {
+        const list = await redditPosts(t);
+        if (!list.length) rows.push([t, "", "", "", "", "", "", "no data", "No Reddit posts found this week."]);
+        for (const r of list) rows.push([t, r.title, r.subreddit, r.upvotes, r.comments, r.published, r.url, "ok", ""]);
+      } catch (err) {
+        rows.push([t, "", "", "", "", "", "", "no data", `Could not reach the source: ${err.message}`]);
+      }
     }
     return rows;
   },
