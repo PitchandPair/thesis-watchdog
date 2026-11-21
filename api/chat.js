@@ -44,22 +44,23 @@ async function buildData() {
       const news = await recent8K(ticker, 3);
       const ins = await insiderActivity(ticker);
       const src = f.latest.netIncome.sourceUrl;
+      const cur = f.currency || "USD";
       const L = (k) => (f.latest[k] ? money(f.latest[k].value) : "no data");
       blocks.push(
         [
           `## ${ticker} (${f.name}), fiscal year ended ${f.latestEnd}, from its annual report on SEC form ${f.form || "10-K"}. Source: ${src}`,
-          `Revenue: ${L("revenue")} USD`,
-          `Net income: ${L("netIncome")} USD`,
-          `Operating cash flow: ${L("cfo")} USD`,
-          `Depreciation and amortization: ${L("dna")} USD`,
-          `Capital spending: ${L("capex")} USD`,
-          `Diluted EPS: ${L("epsDiluted")} USD`,
-          `Total assets: ${L("assets")} USD`,
-          `Stockholders equity: ${L("equity")} USD`,
+          `Revenue: ${L("revenue")} ${cur}`,
+          `Net income: ${L("netIncome")} ${cur}`,
+          `Operating cash flow: ${L("cfo")} ${cur}`,
+          `Depreciation and amortization: ${L("dna")} ${cur}`,
+          `Capital spending: ${L("capex")} ${cur}`,
+          `Diluted EPS: ${L("epsDiluted")} ${cur}`,
+          `Total assets: ${L("assets")} ${cur}`,
+          `Stockholders equity: ${L("equity")} ${cur}`,
           b.status === "ok"
-            ? `Owner earnings (calculated): ${money(b.ownerEarnings)} USD. Buffett-style intrinsic value per share (calculated, assumes ${b.params.growth * 100}% growth for ${b.params.years} years, ${b.params.discount * 100}% discount rate, ${b.params.terminalGrowth * 100}% terminal growth): ${b.intrinsicValuePerShare} USD`
+            ? `Owner earnings (calculated): ${money(b.ownerEarnings)} ${cur}. Buffett-style intrinsic value per share (calculated, assumes ${b.params.growth * 100}% growth for ${b.params.years} years, ${b.params.discount * 100}% discount rate, ${b.params.terminalGrowth * 100}% terminal growth): ${b.intrinsicValuePerShare} ${cur}`
             : `Buffett intrinsic value: no data. ${b.gap}`,
-          g.status === "ok" ? `Graham number (calculated): ${g.grahamNumber} USD` : `Graham number: no data. ${g.gap}`,
+          g.status === "ok" ? `Graham number (calculated): ${g.grahamNumber} ${cur}` : `Graham number: no data. ${g.gap}`,
           p.status === "ok" ? `Piotroski F-score (calculated): ${p.fScore} of ${p.testsComputable} tests passed` : `Piotroski: no data. ${p.gap}`,
           ...news.filings.map((n) => `8-K filed ${n.filed}: ${n.itemNames}. Source: ${n.sourceUrl}`),
           ins.status === "ok" ? `Form 4 insider filings in the last 90 days: ${ins.form4Last90Days}. Source: ${ins.sourceUrl}. Note: ${ins.gap}` : "",
