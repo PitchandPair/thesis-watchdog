@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { SAMPLE_STOCKS, SECTIONS, SectionKey, Stock, aggregate, grade, usd } from "@/lib/data";
 import { VOICES, buildScript } from "@/lib/podcast";
 import { CHECKLIST, GUARDRAILS, LATEST, PRISM_RUNS } from "@/lib/prism";
+import { md } from "@/lib/md";
 
 const STORE = "sift.stocks.v1";
 
@@ -443,7 +444,7 @@ function Prism({ initial, onClose }: { initial: string; onClose: () => void }) {
         {res && (
           <div className="answer">
             {res.error ? <span className="neg">{res.error}</span> : <>
-              <p>{res.answer}</p>
+              <div className="md" dangerouslySetInnerHTML={{ __html: md(res.answer ?? "") }} />
               <div className="muted small">PRISM trace: <b className={res.prism_trace === "sent" ? "pos" : ""}>{res.prism_trace ?? "—"}</b>{res.model ? ` · ${res.model}` : ""} · Information, not investment advice.</div>
             </>}
           </div>
@@ -505,7 +506,7 @@ function AskBar({ stocks }: { stocks: Stock[] }) {
       {res && (
         <div className="answer">
           {res.error ? <span className="neg">{res.error}</span> : <>
-            <p>{res.answer}</p>
+            <div className="md" dangerouslySetInnerHTML={{ __html: md(res.answer ?? "") }} />
             <div className="muted small">{res.level && LEVELS.find((l) => l.id === res.level)?.label} · {res.model} · {res.ms ? (res.ms / 1000).toFixed(1) + "s" : ""} · PRISM trace: <b className={res.prism_trace === "sent" ? "pos" : ""}>{res.prism_trace}</b> · Information, not investment advice.</div>
           </>}
           <button className="btn ghost clear" onClick={() => { setRes(null); setQ(""); }}>Clear</button>

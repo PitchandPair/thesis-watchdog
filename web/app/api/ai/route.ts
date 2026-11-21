@@ -29,7 +29,8 @@ async function secFacts(): Promise<string> {
     const r = await fetch(FACTS_URL, { signal: AbortSignal.timeout(20000) });
     if (!r.ok) return "SEC facts unavailable right now.";
     const text = (await r.text()).slice(0, 60000);
-    factsCache = { at: Date.now(), text };
+    // Don't hold on to a failed pull (the SEC sometimes rate-limits for ~10 minutes).
+    if (!text.includes("could not reach the SEC")) factsCache = { at: Date.now(), text };
     return text;
   } catch {
     return "SEC facts unavailable right now.";
