@@ -34,6 +34,12 @@ Every number comes from an SEC filing and links back to it. Code does the math. 
 
 Informational only. Not investment advice. Public data only.
 
+## Survey employees (simulation)
+
+- `public/stocks.html`: pick a stock, then "Survey employees". Runs a simulated survey of former employees.
+- `api/survey.js`, `lib/survey.js`: safe AI-written questions, sample people, simulated email and payout. Nothing is emailed and no money moves.
+- `api/contacts.js`, `lib/apollo.js`: a key-protected lookup of real former employees through Apollo. Built and tested with unit tests, but **not in use**: no Apollo key is set, so it returns "no data", and it has never been run against Apollo. It sends no email and contacts no one.
+
 ## Tests
 
 `npm test`
