@@ -6,6 +6,9 @@ import { headlines, redditPosts } from "../lib/news.js";
 import { resolveCompany } from "../lib/sec.js";
 import { labelHeadlines } from "../lib/sentiment.js";
 import { hasModelKey } from "../lib/llm.js";
+import { labelFiling } from "../lib/sentiment.js";
+import { recentFilingText } from "../lib/filings.js";
+import { hasRedditKey, trendingPosts } from "../lib/reddit.js";
 
 const cell = (x) => {
   if (x === null || x === undefined) return "";
@@ -91,6 +94,72 @@ const builders = {
       }),
     );
     return [header, ...perTicker.flat()];
+  },
+  // 8-K filing text (pulled from the SEC, no AI) plus the AI's label for each filing.
+  async filings_ai(tickers) {
+    const header = ["ticker", "filed", "what_was_reported", "item_codes", "ai_label", "ai_reason", "filing_text_excerpt", "source_url", "model", "prism_trace", "status", "data_gap"];
+    const rows = [header];
+    for (let i = 0; i < tickers.length; i += 4) {
+      const batch = await Promise.all(
+        tickers.slice(i, i + 4).map(async (t) => {
+          try {
+            const f = await recentFilingText(t);
+            if (!f.filings.length) return [[t, "", "", "", "", "", "", "", "", "", "no data", f.gap]];
+            const out = [];
+            for (const x of f.filings) {
+              let ai = { label: "", reason: "", model: "", prism: "" };
+              let gap = x.note;
+              if (!x.text) gap = gap || "No filing text to read.";
+              else if (!hasModelKey()) gap = "The AI key is not set on the server yet.";
+              else {
+                try {
+                  ai = await labelFiling(t, f.name, x);
+                } catch (err) {
+                  gap = `AI could not read it: ${err.message}`;
+                }
+              }
+              out.push([t, x.filed, x.itemNames, x.itemCodes, ai.label, ai.reason, x.text.slice(0, 700), x.sourceUrl, ai.model, ai.prism, "ok", gap]);
+            }
+            return out;
+          } catch (err) {
+            return [[t, "", "", "", "", "", "", "", "", "", "no data", `Could not reach the source: ${err.message}`]];
+          }
+        }),
+      );
+      rows.push(...batch.flat());
+    }
+    return rows;
+  },
+  // Trending Reddit posts per company, with the AI's label for each post title.
+  async reddit_ai(tickers) {
+    const header = ["ticker", "post_title", "subreddit", "upvotes", "comments", "published", "ai_label", "ai_reason", "source_url", "how_subreddit_was_found", "status", "data_gap"];
+    if (!hasRedditKey()) return [header, ["", "", "", "", "", "", "", "", "", "", "no data", "Reddit is not connected yet. It needs a free Reddit API key."]];
+    const rows = [header];
+    for (let i = 0; i < tickers.length; i += 4) {
+      const batch = await Promise.all(
+        tickers.slice(i, i + 4).map(async (t) => {
+          try {
+            const co = await resolveCompany(t);
+            const { posts, foundBy } = await trendingPosts(t, co?.name);
+            if (!posts.length) return [[t, "", "", "", "", "", "", "", "", foundBy, "no data", "No trending posts found this week."]];
+            let labeled = posts.map((p) => ({ ...p, label: "", reason: "" }));
+            let gap = "";
+            if (hasModelKey()) {
+              try {
+                labeled = await labelHeadlines(t, co?.name, posts);
+              } catch (err) {
+                gap = `AI could not label: ${err.message}`;
+              }
+            } else gap = "The AI key is not set on the server yet.";
+            return labeled.map((p) => [t, p.title, p.subreddit, p.upvotes, p.comments, p.published, p.label, p.reason, p.url, foundBy, "ok", gap]);
+          } catch (err) {
+            return [[t, "", "", "", "", "", "", "", "", "", "no data", `Could not reach Reddit: ${err.message}`]];
+          }
+        }),
+      );
+      rows.push(...batch.flat());
+    }
+    return rows;
   },
   async reddit(tickers) {
     const rows = [["ticker", "post_title", "subreddit", "upvotes", "comments", "published", "source_url", "status", "data_gap"]];
