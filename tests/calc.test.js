@@ -34,7 +34,7 @@ test("buffett: reports a gap instead of guessing when data is missing", () => {
 
 test("buffett: negative owner earnings gives no value", () => {
   const neg = { ...sample, latest: { ...sample.latest, netIncome: f(-200) } };
-  assert.equal(buffett(neg).status, "no data");
+  assert.equal(buffett(neg).status, "negative");
 });
 
 test("graham number", () => {
