@@ -11,6 +11,8 @@ import { recentFilingText } from "../lib/filings.js";
 import { hasRedditKey, trendingPosts } from "../lib/reddit.js";
 import { congressTrades, rowsPerTicker } from "../lib/congress.js";
 import { summarize } from "../lib/summary.js";
+import { researchMoat } from "../lib/moat.js";
+import { parseRows, writeBriefing } from "../lib/briefing.js";
 
 const cell = (x) => {
   if (x === null || x === undefined) return "";
@@ -204,6 +206,40 @@ const builders = {
       rows.push(...batch);
     }
     return rows;
+  },
+  // One-time research on a stronger model: how hard the business is to copy and how many real competitors it has.
+  async moat(tickers) {
+    const header = ["ticker", "company", "moat", "moat_reason", "market_structure", "main_competitors", "structure_reason", "ai_confidence", "model", "prism_trace", "status", "data_gap"];
+    if (!hasModelKey()) return [header, ["", "", "", "", "", "", "", "", "", "", "no data", "The AI key is not set on the server yet."]];
+    const rows = [header];
+    for (let i = 0; i < tickers.length; i += 4) {
+      const batch = await Promise.all(
+        tickers.slice(i, i + 4).map(async (t) => {
+          try {
+            const m = await researchMoat(t);
+            const gap = "From the AI model's general knowledge, not from a filing. Check before relying on it.";
+            return [t, m.name, m.moat, m.moatReason, m.structure, m.competitors, m.structureReason, m.confidence, m.model, m.prism, "ok", gap];
+          } catch (err) {
+            return [t, "", "", "", "", "", "", "", "", "", "no data", `AI could not research it: ${err.message}`];
+          }
+        }),
+      );
+      rows.push(...batch);
+    }
+    return rows;
+  },
+  // The 60-second spoken briefing. The Sheet sends its Results columns in ?data= so the AI reads what the user sees.
+  async briefing(tickers, q) {
+    const header = ["item", "value"];
+    if (!hasModelKey()) return [header, ["status", "no data"], ["data_gap", "The AI key is not set on the server yet."]];
+    const rows = parseRows(q.data);
+    if (!rows.length) return [header, ["status", "no data"], ["data_gap", "The Sheet sent no Results rows."]];
+    try {
+      const b = await writeBriefing(rows);
+      return [header, ["briefing", b.script], ["word_count", b.words], ["seconds_to_read_aloud", Math.round((b.words / 165) * 60)], ["stocks_covered", rows.length], ["model", b.model], ["prism_trace", b.prism], ["status", "ok"], ["table_the_ai_was_given", b.table]];
+    } catch (err) {
+      return [header, ["status", "no data"], ["data_gap", `AI could not write it: ${err.message}`]];
+    }
   },
   async reddit(tickers) {
     const rows = [["ticker", "post_title", "subreddit", "upvotes", "comments", "published", "source_url", "status", "data_gap"]];
