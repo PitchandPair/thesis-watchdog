@@ -13,6 +13,7 @@ import { congressTrades, rowsPerTicker } from "../lib/congress.js";
 import { summarize } from "../lib/summary.js";
 import { researchMoat } from "../lib/moat.js";
 import { parseRows, writeBriefing } from "../lib/briefing.js";
+import { parseSift, writeSift } from "../lib/sift.js";
 
 const cell = (x) => {
   if (x === null || x === undefined) return "";
@@ -237,6 +238,19 @@ const builders = {
     try {
       const b = await writeBriefing(rows);
       return [header, ["briefing", b.script], ["word_count", b.words], ["seconds_to_read_aloud", Math.round((b.words / 165) * 60)], ["stocks_covered", rows.length], ["model", b.model], ["prism_trace", b.prism], ["status", "ok"], ["table_the_ai_was_given", b.table]];
+    } catch (err) {
+      return [header, ["status", "no data"], ["data_gap", `AI could not write it: ${err.message}`]];
+    }
+  },
+  // "Sift": the briefing in show format for the stocks the Sheet picked (up to 3). ?data= carries their numbers.
+  async sift(tickers, q) {
+    const header = ["item", "value"];
+    if (!hasModelKey()) return [header, ["status", "no data"], ["data_gap", "The AI key is not set on the server yet."]];
+    const stocks = parseSift(q.data);
+    if (!stocks.length) return [header, ["status", "no data"], ["data_gap", "The Sheet sent no stocks to cover."]];
+    try {
+      const b = await writeSift(stocks);
+      return [header, ["script", b.script], ["word_count", b.words], ["seconds_to_read_aloud", b.seconds], ["stocks_covered", stocks.map((x) => x.ticker).join(", ")], ["model", b.model], ["prism_trace", b.prism], ["status", "ok"], ["facts_the_ai_was_given", b.facts], ["data_credit", "Congress trades: Data via Bargo (https://www.bargo.ai). Filings: SEC EDGAR. Headlines: Google News."]];
     } catch (err) {
       return [header, ["status", "no data"], ["data_gap", `AI could not write it: ${err.message}`]];
     }
