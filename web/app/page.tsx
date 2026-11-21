@@ -73,6 +73,8 @@ export default function Home() {
         </div>
       </header>
 
+      <AskBar stocks={stocks} />
+
       <section className="summary">
         <div className="stat"><label>Tracked</label><b>{stocks.length}</b></div>
         <div className="stat"><label>Avg Sift score</label><b>{avg || "—"}</b></div>
@@ -453,5 +455,62 @@ function Prism({ initial, onClose }: { initial: string; onClose: () => void }) {
       </div>
       <div className="d-foot"><span className="muted small">PRISM by Block Convey · test ids on file</span></div>
     </Modal>
+  );
+}
+
+const LEVELS = [
+  { id: "quick", label: "Quick", hint: "Fastest, short answers" },
+  { id: "balanced", label: "Balanced", hint: "Good mix of speed and depth" },
+  { id: "deep", label: "Deep", hint: "Slowest, most thorough" },
+] as const;
+const SUGGESTED = [
+  "Which stock has the biggest gap to Buffett value?",
+  "Compare Glassdoor and CEO approval across my list",
+  "Who is a near-monopoly and who are their competitors?",
+  "Summarize Micron's latest annual report",
+];
+
+type AiResult = { answer?: string; model?: string; level?: string; ms?: number; prism_trace?: string; error?: string };
+
+function AskBar({ stocks }: { stocks: Stock[] }) {
+  const [q, setQ] = useState("");
+  const [level, setLevel] = useState<(typeof LEVELS)[number]["id"]>("balanced");
+  const [busy, setBusy] = useState(false);
+  const [res, setRes] = useState<AiResult | null>(null);
+  const ask = async (question: string) => {
+    if (!question.trim() || busy) return;
+    setQ(question); setBusy(true); setRes(null);
+    const dashboard = stocks.map((s) => ({ ...s, spark: undefined, dataNote: s.pending ? "pending sync" : "price, intrinsic value, scores, trades and headlines are sample; Glassdoor and CEO figures are real (Nov 2026)" }));
+    try {
+      const r = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question, level, dashboard }) });
+      setRes(await r.json());
+    } catch { setRes({ error: "Sift didn't respond. Try again." }); }
+    setBusy(false);
+  };
+  return (
+    <section className="askbar">
+      <form onSubmit={(e) => { e.preventDefault(); ask(q); }} className="ask-form">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask Sift anything about your watchlist" aria-label="Ask Sift" />
+        <div className="levels" role="radiogroup" aria-label="Answer depth">
+          {LEVELS.map((l) => (
+            <button type="button" key={l.id} role="radio" aria-checked={level === l.id} title={l.hint} className={level === l.id ? "on" : ""} onClick={() => setLevel(l.id)}>{l.label}</button>
+          ))}
+        </div>
+        <button className="btn primary" disabled={busy}>{busy ? "Thinking…" : "Ask"}</button>
+      </form>
+      {!res && !busy && (
+        <div className="suggest">{SUGGESTED.map((x) => <button key={x} onClick={() => ask(x)}>{x}</button>)}</div>
+      )}
+      {busy && <div className="answer muted">Working on it at {LEVELS.find((l) => l.id === level)?.label} depth…</div>}
+      {res && (
+        <div className="answer">
+          {res.error ? <span className="neg">{res.error}</span> : <>
+            <p>{res.answer}</p>
+            <div className="muted small">{res.level && LEVELS.find((l) => l.id === res.level)?.label} · {res.model} · {res.ms ? (res.ms / 1000).toFixed(1) + "s" : ""} · PRISM trace: <b className={res.prism_trace === "sent" ? "pos" : ""}>{res.prism_trace}</b> · Information, not investment advice.</div>
+          </>}
+          <button className="btn ghost clear" onClick={() => { setRes(null); setQ(""); }}>Clear</button>
+        </div>
+      )}
+    </section>
   );
 }

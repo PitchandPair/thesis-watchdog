@@ -205,3 +205,18 @@ ul { list-style: none; }
 .check-q:hover { background: var(--l1h); }
 @media (max-width: 760px) { .checks { grid-template-columns: 1fr; } .prism-btn { display: none; } }
 .kv .pos { color: var(--up); } .kv .neg { color: var(--down); }
+
+.askbar { margin: 32px 0 0; }
+.ask-form { display: flex; border: 1px solid var(--bs2); background: var(--l1); }
+.ask-form input { flex: 1; min-width: 0; background: transparent; border: 0; padding: 0 16px; height: 56px; color: var(--text); font: inherit; font-size: 16px; }
+.ask-form input:focus { outline: 2px solid #fff; outline-offset: -2px; }
+.levels { display: flex; align-items: center; padding: 0 8px; border-left: 1px solid var(--bs); }
+.levels button { height: 32px; padding: 0 12px; font-size: 13px; color: var(--muted); border: 1px solid var(--bs); margin-left: -1px; }
+.levels button.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+.ask-form .btn { height: 56px; padding: 0 40px; }
+.suggest { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.suggest button { font-size: 12px; color: var(--text2); border: 1px solid var(--bs); padding: 6px 10px; background: var(--bg); }
+.suggest button:hover { background: var(--l1h); color: var(--text); }
+.askbar .answer { margin-top: 12px; border: 1px solid var(--bs); position: relative; padding-right: 96px; }
+.answer .clear { position: absolute; top: 8px; right: 8px; min-height: 32px; font-size: 12px; }
+@media (max-width: 760px) { .ask-form { flex-wrap: wrap; } .levels { border: 0; padding: 8px; } .ask-form .btn { flex: 1; } }
