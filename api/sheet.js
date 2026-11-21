@@ -10,6 +10,7 @@ import { labelFiling } from "../lib/sentiment.js";
 import { recentFilingText } from "../lib/filings.js";
 import { hasRedditKey, trendingPosts } from "../lib/reddit.js";
 import { congressTrades, rowsPerTicker } from "../lib/congress.js";
+import { summarize } from "../lib/summary.js";
 
 const cell = (x) => {
   if (x === null || x === undefined) return "";
@@ -181,6 +182,26 @@ const builders = {
         }),
       );
       rows.push(...batch.flat());
+    }
+    return rows;
+  },
+  // One short AI summary per stock, written only from the facts in the facts_used column.
+  async ai_summary(tickers) {
+    const header = ["ticker", "ai_summary", "facts_used", "source_url", "model", "prism_trace", "status", "data_gap"];
+    if (!hasModelKey()) return [header, ["", "", "", "", "", "", "no data", "The AI key is not set on the server yet."]];
+    const rows = [header];
+    for (let i = 0; i < tickers.length; i += 4) {
+      const batch = await Promise.all(
+        tickers.slice(i, i + 4).map(async (t) => {
+          try {
+            const s = await summarize(t);
+            return [t, s.summary, s.factsUsed, s.sourceUrl, s.model, s.prism, "ok", s.gap];
+          } catch (err) {
+            return [t, "", "", "", "", "", "no data", `AI could not write it: ${err.message}`];
+          }
+        }),
+      );
+      rows.push(...batch);
     }
     return rows;
   },
