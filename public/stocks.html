@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stock Scorecard: stocks</title>
+<style>
+  :root { --ink:#14181f; --muted:#5b6472; --line:#dfe3e8; --bg:#f6f7f9; --card:#fff; --accent:#1f5fbf; --warn-bg:#fff4d6; --warn-ink:#6b4a00; --ok:#1a7f45; --bad:#b3261e; }
+  * { box-sizing: border-box; }
+  body { font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; background: var(--bg); color: var(--ink); }
+  header { background: var(--card); border-bottom: 1px solid var(--line); padding: 14px 20px; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  main { max-width: 1040px; margin: 0 auto; padding: 16px; }
+  .stocks { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .stocks button { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 8px 12px; cursor: pointer; font: inherit; text-align: left; }
+  .stocks button b { display: block; }
+  .stocks button span { color: var(--muted); font-size: 12px; }
+  .stocks button.on { border-color: var(--accent); box-shadow: 0 0 0 2px #1f5fbf33; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+  .panel h2 { margin: 0; padding: 14px 16px 0; font-size: 18px; }
+  .tabs { display: flex; gap: 4px; padding: 10px 12px 0; border-bottom: 1px solid var(--line); }
+  .tabs button { border: 0; background: none; padding: 8px 12px; font: inherit; cursor: pointer; color: var(--muted); border-bottom: 3px solid transparent; }
+  .tabs button.on { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab { padding: 16px; display: none; }
+  .tab.on { display: block; }
+  .notice { background: var(--warn-bg); color: var(--warn-ink); border: 1px solid #e6c766; border-radius: 8px; padding: 10px 12px; font-weight: 600; margin-bottom: 14px; }
+  .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .seg button { border: 1px solid var(--line); background: var(--card); padding: 8px 14px; font: inherit; cursor: pointer; }
+  .seg button:first-child { border-radius: 8px 0 0 8px; } .seg button:last-child { border-radius: 0 8px 8px 0; }
+  .seg button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  input[type=number] { font: inherit; padding: 8px; width: 110px; border: 1px solid var(--line); border-radius: 8px; }
+  textarea { width: 100%; height: 70px; font: inherit; padding: 8px; border: 1px solid var(--line); border-radius: 8px; }
+  .go { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 10px 18px; font: inherit; font-weight: 600; cursor: pointer; }
+  .go:disabled { opacity: .6; cursor: wait; }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin-top: 14px; }
+  .card h3 { margin: 0 0 8px; font-size: 15px; }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+  .step { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 99px; background: #e8ecf1; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+  .badge.done, .badge.pass { background: #dff3e6; color: var(--ok); } .badge.block { background: #fbe1df; color: var(--bad); } .badge.sim { background: var(--warn-bg); color: var(--warn-ink); }
+  ul.q { list-style: none; padding: 0; margin: 0; } ul.q li { padding: 8px 0; border-top: 1px solid var(--line); } ul.q li:first-child { border-top: 0; }
+  ul.q small { color: var(--muted); display: block; } .struck { text-decoration: line-through; color: var(--muted); }
+  pre { white-space: pre-wrap; background: var(--bg); border-radius: 8px; padding: 12px; margin: 0; font: 13px/1.5 ui-monospace, Menlo, monospace; }
+  .scroll { max-height: 360px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; } th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { position: sticky; top: 0; background: var(--bg); }
+  .totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+  .totals div { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; } .totals b { display: block; font-size: 20px; }
+  footer { color: var(--muted); font-size: 12px; text-align: center; padding: 18px; }
+  @media (max-width: 560px) { main { padding: 10px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Stock Scorecard</h1>
+  <p>Pick a stock, then use the tabs. Informational only. Not investment advice.</p>
+</header>
+<main>
+  <div class="stocks" id="stocks"></div>
+  <div class="panel">
+    <h2 id="title"></h2>
+    <div class="tabs">
+      <button data-tab="ask" class="on">Ask the analyst</button>
+      <button data-tab="survey">Survey employees</button>
+    </div>
+
+    <div class="tab on" id="tab-ask">
+      <label for="q">Question about this company</label>
+      <textarea id="q"></textarea>
+      <button class="go" id="askGo">Ask</button>
+      <div class="card"><pre id="askOut">Answers appear here.</pre></div>
+    </div>
+
+    <div class="tab" id="tab-survey">
+      <div class="notice" id="notice">Sample data. No real person is contacted and no money moves.</div>
+      <div class="row">
+        <div>
+          <label>How many former employees</label>
+          <div class="seg" id="count"><button data-n="20" class="on">20</button><button data-n="50">50</button><button data-n="200">200</button></div>
+        </div>
+        <div>
+          <label for="pay">Thank-you per completed survey ($)</label>
+          <input type="number" id="pay" min="0" max="500" value="50">
+        </div>
+        <button class="go" id="surveyGo">Send survey (simulation)</button>
+      </div>
+      <div class="hint" id="maxCost"></div>
+      <div id="result"></div>
+    </div>
+  </div>
+</main>
+<footer>Survey feature is a simulation: made-up people, nothing emailed, no money moved. Informational only. Not investment advice.</footer>
+
+<script>
+const STOCKS = [["NVDA","NVIDIA"],["AMD","Advanced Micro Devices"],["TSM","Taiwan Semiconductor"],["MU","Micron"],["LRCX","Lam Research"],["ASML","ASML"],["AVGO","Broadcom"],["INTC","Intel"],["QCOM","Qualcomm"],["AMAT","Applied Materials"],["SPCX","SpaceX"],["ANT","Anthropic"]];
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const money = (n) => "$" + Number(n || 0).toLocaleString("en-US");
+let current = STOCKS[0], count = 20;
+
+function pick(s) {
+  current = s;
+  document.querySelectorAll("#stocks button").forEach((b) => b.classList.toggle("on", b.dataset.t === s[0]));
+  $("title").textContent = `${s[1]} (${s[0]})`;
+  $("q").value = `What was ${s[1]}'s net income in its latest fiscal year, and where does that number come from?`;
+  $("askOut").textContent = "Answers appear here.";
+  $("result").innerHTML = "";
+  const u = new URL(location.href); u.searchParams.set("ticker", s[0]); history.replaceState(null, "", u);
+}
+function showTab(name) {
+  document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === name));
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t.id === "tab-" + name));
+}
+function updateCost() {
+  const p = Math.max(0, Math.min(500, Number($("pay").value) || 0));
+  $("maxCost").textContent = `If everyone completes it: ${money(count * p)} (simulated, no money moves)`;
+}
+
+$("stocks").innerHTML = STOCKS.map((s) => `<button data-t="${s[0]}"><b>${s[0]}</b><span>${esc(s[1])}</span></button>`).join("");
+$("stocks").onclick = (e) => { const b = e.target.closest("button"); if (b) pick(STOCKS.find((s) => s[0] === b.dataset.t)); };
+document.querySelector(".tabs").onclick = (e) => { if (e.target.dataset.tab) showTab(e.target.dataset.tab); };
+$("count").onclick = (e) => { if (!e.target.dataset.n) return; count = Number(e.target.dataset.n); document.querySelectorAll("#count button").forEach((b) => b.classList.toggle("on", b === e.target)); updateCost(); };
+$("pay").oninput = updateCost;
+
+$("askGo").onclick = async () => {
+  $("askOut").textContent = "Working...";
+  try {
+    const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: $("q").value }) });
+    const j = await r.json();
+    $("askOut").textContent = j.answer || j.error || "No answer.";
+  } catch (e) { $("askOut").textContent = "Request failed: " + e.message; }
+};
+
+$("surveyGo").onclick = async () => {
+  const btn = $("surveyGo"), pay = Math.max(0, Math.min(500, Number($("pay").value) || 0));
+  btn.disabled = true; btn.textContent = "Running simulation...";
+  $("result").innerHTML = '<div class="card">Writing safe questions and building the sample run. This takes up to 10 seconds.</div>';
+  try {
+    const r = await fetch(`/api/survey?ticker=${encodeURIComponent(current[0])}&count=${count}&payment=${pay}`);
+    const d = await r.json();
+    if (!r.ok || d.error) throw new Error(d.error || "The survey service returned " + r.status);
+    render(d);
+  } catch (e) {
+    $("result").innerHTML = `<div class="card">Could not run the simulation: ${esc(e.message)}</div>`;
+  }
+  btn.disabled = false; btn.textContent = "Send survey (simulation)";
+};
+
+function render(d) {
+  if (d.notice) $("notice").textContent = d.notice;
+  const badge = (s) => `<span class="badge ${s === "done" ? "done" : s === "simulated" ? "sim" : ""}">${esc(s)}</span>`;
+  const q = d.questions || {}, approved = q.approved || [], blocked = (q.all_generated || []).filter((x) => x.safe === false);
+  const t = d.totals || {};
+  const fallback = String(q.source || "").startsWith("fallback");
+  $("result").innerHTML = `
+    <div class="card"><h3>Steps</h3><div class="steps">${(d.steps || []).map((s) => `<div class="step"><b>${s.step}. ${esc(s.name)}</b><br>${badge(s.status)}<br>${esc(s.detail)}</div>`).join("")}</div></div>
+    <div class="card"><h3>Totals</h3><div class="totals">
+      <div>Invited<b>${esc(t.invited)}</b></div><div>Completed<b>${esc(t.completed)}</b></div>
+      <div>Response rate<b>${Math.round((t.response_rate || 0) * 100)}%</b></div>
+      <div>Payout total (simulated)<b>${money(t.payout_total)}</b></div><div>Maximum cost<b>${money(t.max_cost_if_all_complete)}</b></div></div></div>
+    <div class="card"><h3>Questions</h3>
+      ${fallback ? "<p>AI was unavailable or its questions did not pass, so the hand-written safe set is shown.</p>" : ""}
+      <ul class="q">${approved.map((x) => `<li>${esc(x.text)} <span class="badge pass">Passed</span><small>Code rules: ${esc(x.rule_check)}. AI review: ${esc(x.ai_review)}</small></li>`).join("")}</ul>
+      ${blocked.length ? `<h3 style="margin-top:12px">Blocked</h3><ul class="q">${blocked.map((x) => `<li><span class="struck">${esc(x.text)}</span> <span class="badge block">Blocked</span><small>${esc(x.rule_check)} ${esc(x.ai_review)}</small></li>`).join("")}</ul>` : ""}
+      <p class="hint">Written by AI through Nicrron (${esc(q.model || "no model")}). Checked by code rules and a second AI review. Both AI calls are recorded in PRISM (${esc(q.prism_trace || "not recorded")}).</p></div>
+    <div class="card"><h3>Email that would be sent (not sent)</h3><pre>${esc("Subject: " + (d.email_preview?.subject || "") + "\n\n" + (d.email_preview?.body || ""))}</pre></div>
+    <div class="card"><h3>Recipients (sample people)</h3><div class="scroll"><table>
+      <thead><tr><th>Name</th><th>Email</th><th>Former role</th><th>Left in</th><th>Email</th><th>Survey</th><th>Payout (simulated)</th></tr></thead>
+      <tbody>${(d.recipients || []).map((p) => `<tr><td>${esc(p.name)} <span class="badge sim">Sample</span></td><td>${esc(p.email)}</td><td>${esc(p.former_role)}</td><td>${esc(p.left_company_in)}</td><td>${esc(p.email_status)}</td><td>${esc(p.survey_status)}</td><td>${p.payout_amount ? money(p.payout_amount) + ", Meow payout, simulated" : "none"}</td></tr>`).join("")}</tbody></table></div></div>`;
+}
+
+const want = new URL(location.href).searchParams.get("ticker");
+pick(STOCKS.find((s) => s[0] === String(want || "").toUpperCase()) || STOCKS[0]);
+if (new URL(location.href).searchParams.get("tab") === "survey") showTab("survey");
+updateCost();
+</script>
+</body>
+</html>
