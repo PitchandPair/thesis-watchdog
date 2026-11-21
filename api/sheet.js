@@ -78,7 +78,7 @@ export default async function handler(req, res) {
     .split(",")
     .map((t) => t.trim().toUpperCase())
     .filter(Boolean)
-    .slice(0, 10);
+    .slice(0, 30);
   if (!builders[tab]) {
     res.status(400).send(`unknown tab. use one of: ${Object.keys(builders).join(" ")}`);
     return;
