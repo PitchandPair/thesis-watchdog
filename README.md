@@ -13,7 +13,7 @@ Every number comes from an SEC filing and links back to it. Code does the math. 
 
 ## Endpoints
 
-- `GET /api/sheet?tab=buffett&tickers=NVDA,AMD,MU` (tabs: `buffett`, `fundamentals`, `news`, `insider`)
+- `GET /api/sheet?tab=buffett&tickers=NVDA,AMD,MU` (tabs: `buffett`, `fundamentals`, `news`, `insider`, `congress`)
 - `POST /api/chat` with `{"question": "..."}`
 
 ## Environment variables
@@ -23,6 +23,7 @@ Every number comes from an SEC filing and links back to it. Code does the math. 
 | `NICRRON_API_KEY` | Model calls (required for `/api/chat`) |
 | `PRISMTRACE_API_KEY` | PRISM tracing |
 | `PRISMTRACE_PROJECT_ID` | PRISM project |
+| `BARGO_API_KEY` | Optional. Free key for the Congress trades source (more rows per day) |
 | `SEC_USER_AGENT` | Contact string the SEC asks for, for example `Your Name you@example.com` |
 
 ## Data gaps, stated plainly

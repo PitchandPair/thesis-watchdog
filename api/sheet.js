@@ -9,6 +9,7 @@ import { hasModelKey } from "../lib/llm.js";
 import { labelFiling } from "../lib/sentiment.js";
 import { recentFilingText } from "../lib/filings.js";
 import { hasRedditKey, trendingPosts } from "../lib/reddit.js";
+import { congressTrades, rowsPerTicker } from "../lib/congress.js";
 
 const cell = (x) => {
   if (x === null || x === undefined) return "";
@@ -161,6 +162,28 @@ const builders = {
     }
     return rows;
   },
+  // Stock trades disclosed by members of Congress (House + Senate). Data via Bargo (https://www.bargo.ai).
+  // status: "ok" = a trade, "no trades" = nothing disclosed in the last 3 months, "no data" = source problem.
+  async congress(tickers) {
+    const rows = [["ticker", "member", "chamber", "buy_or_sell", "amount_range", "trade_date", "filed_date", "source_url", "status", "data_gap"]];
+    const limit = rowsPerTicker(tickers.length);
+    for (let i = 0; i < tickers.length; i += 4) {
+      const batch = await Promise.all(
+        tickers.slice(i, i + 4).map(async (t) => {
+          try {
+            const c = await congressTrades(t, limit);
+            if (!c.trades.length) return [[t, "", "", "", "", "", "", "https://www.bargo.ai", c.limited ? "no data" : "no trades", c.gap]];
+            const capped = c.trades.length >= limit ? `Only the newest ${limit} trades are shown (free source limit). Older ones are not counted.` : "";
+            return c.trades.map((x) => [t, x.member, x.chamber, x.buyOrSell, x.amountRange, x.tradeDate, x.filedDate, x.sourceUrl || "https://www.bargo.ai", "ok", x.sourceUrl ? capped : "No link to the filing from the source."]);
+          } catch (err) {
+            return [[t, "", "", "", "", "", "", "https://www.bargo.ai", "no data", `Could not reach the source: ${err.message}`]];
+          }
+        }),
+      );
+      rows.push(...batch.flat());
+    }
+    return rows;
+  },
   async reddit(tickers) {
     const rows = [["ticker", "post_title", "subreddit", "upvotes", "comments", "published", "source_url", "status", "data_gap"]];
     for (const t of tickers) {
@@ -203,6 +226,10 @@ export default async function handler(req, res) {
   }
   const rows = await builders[tab](tickers, q);
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
-  res.setHeader("Cache-Control", "s-maxage=900, stale-while-revalidate=3600");
+  // Congress trades change slowly and the free source has a small daily budget: cache for 12 hours.
+  // A failed pull is only cached for 10 minutes so it can recover.
+  const failed = rows.some((r) => r[r.length - 2] === "no data");
+  const cache = tab === "congress" && !failed ? "s-maxage=43200, stale-while-revalidate=86400" : tab === "congress" ? "s-maxage=600" : "s-maxage=900, stale-while-revalidate=3600";
+  res.setHeader("Cache-Control", cache);
   res.status(200).send(csv(rows));
 }
