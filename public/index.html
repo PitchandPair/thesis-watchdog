@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stock Scorecard</title>
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #111; }
+  h1 { margin-bottom: 4px; }
+  p.sub { color: #555; margin-top: 0; }
+  textarea { width: 100%; height: 80px; font: inherit; padding: 8px; box-sizing: border-box; }
+  button { font: inherit; padding: 8px 16px; margin-top: 8px; cursor: pointer; }
+  pre { white-space: pre-wrap; background: #f5f5f5; padding: 12px; border-radius: 6px; }
+  small { color: #777; }
+</style>
+</head>
+<body>
+<h1>Stock Scorecard</h1>
+<p class="sub">An analyst that shows its work. Every number links to its SEC filing.</p>
+<textarea id="q">What was NVIDIA's net income in its latest fiscal year, and where does that number come from?</textarea>
+<br><button id="go">Ask</button>
+<pre id="out">Answers appear here.</pre>
+<small>Informational only. Not investment advice. No promised returns.</small>
+<script>
+  const out = document.getElementById("out");
+  document.getElementById("go").onclick = async () => {
+    out.textContent = "Working...";
+    try {
+      const r = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: document.getElementById("q").value }),
+      });
+      const j = await r.json();
+      out.textContent = j.answer || j.error || "No answer.";
+    } catch (e) {
+      out.textContent = "Request failed: " + e.message;
+    }
+  };
+</script>
+</body>
+</html>
