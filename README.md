@@ -43,3 +43,25 @@ Informational only. Not investment advice. Public data only.
 ## Tests
 
 `npm test`
+
+## Web frontend (`web/`)
+
+A Next.js dashboard for Sift, deployed as its own Vercel project (`sift-web`, root directory `web`): https://sift-web-one.vercel.app. It does not change anything in the backend above; the root project ignores the `web/` folder.
+
+- **Dashboard:** one card per company with the Sift score, price, Buffett value gap (green below, red above), metric scores, and CEO approval. Data is a snapshot of the Google Sheet in `web/lib/data.ts`.
+- **Click for source:** every number opens a panel naming its Sheet tab and cell, with "Open in Google Sheet" and the SEC or Glassdoor link.
+- **Ask Sift:** question bar with Quick / Balanced / Deep, which picks the Nicrron model (Haiku / Sonnet / Opus by default). Answers use the dashboard data plus `/api/chat?facts=1`, and are traced to PRISM.
+- **PRISM checks:** test runs, guardrails, and an "Ask the analyst" box that calls `/api/chat`.
+- **Survey employees (simulation):** a tab that calls `/api/survey`. Nothing is sent or paid.
+- **AI summary podcast:** select stocks, pick one of three ElevenLabs voices, generate audio.
+- Values the Sheet doesn't have yet are tagged "demo" and never change the Sift score.
+
+Run locally: `cd web && npm install && npm run dev`.
+
+| `sift-web` variable | Purpose |
+| --- | --- |
+| `NICRRON_API_KEY` | Ask Sift answers |
+| `PRISMTRACE_API_KEY`, `PRISMTRACE_PROJECT_ID` | PRISM tracing for Ask Sift |
+| `ELEVENLABS_API_KEY` | Podcast audio |
+| `NICRRON_MODEL_QUICK`, `_BALANCED`, `_DEEP` | Optional model overrides |
+| `ANALYST_URL`, `SURVEY_URL` | Optional; default to the stock-scorecard endpoints |

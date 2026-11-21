@@ -1,18 +1,15 @@
-# Sift · Frontend
+# Sift web
 
-Next.js app for the Sift stock scorecard. Deploys to Vercel with zero config.
+Next.js 16 dashboard for Sift. See the "Web frontend" section of the root README for features and settings.
 
-- Stock cards with aggregate Sift score, price, Buffett value gap, section bars
-- Click a card for full breakdown (weights, moat, competitors, congress trades, feedback, trend odds)
-- Add / remove stocks (saved in the browser)
-- Select stocks → Create AI summary podcast (3 ElevenLabs voices)
+- `app/page.tsx`: dashboard, detail view, click-for-source panel, Ask Sift, PRISM checks, Survey tab, podcast
+- `app/api/ai`: Ask Sift (Nicrron, level picks the model, traced to PRISM)
+- `app/api/ask`: proxy to the analyst (`/api/chat`)
+- `app/api/survey`: proxy to the simulated survey (`/api/survey`)
+- `app/api/podcast`: ElevenLabs text to speech
+- `lib/data.ts`: Sheet snapshot with a source for every value
+- `lib/prism.ts`: PRISM test results
 
-## Run
-npm install && npm run dev
+To refresh the data, update `lib/data.ts` from the Sheet (Results, Buffett, Moat + Competitors, Company Feedback, Congress Summary, News Sentiment tabs).
 
-## Deploy
-Import to Vercel. Set `ELEVENLABS_API_KEY` in env vars for audio.
-
-## Data
-`lib/data.ts` holds sample data. Next step: read the Google Sheet end-results tab.
 Information only. Not investment advice.
