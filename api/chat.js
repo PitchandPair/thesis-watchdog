@@ -2,10 +2,8 @@
 // Numbers come from code (lib/calc.js). The model only explains them and must cite sources.
 import { fundamentals, recent8K, insiderActivity, COMPANIES } from "../lib/sec.js";
 import { buffett, graham, piotroski } from "../lib/calc.js";
+import { ask } from "../lib/llm.js";
 
-const NICRRON_URL = (process.env.NICRRON_BASE_URL || "https://api.nicrron.ai/v1") + "/chat/completions";
-const MODEL = process.env.NICRRON_MODEL || "nicrron/auto";
-const PRISM_HOST = process.env.PRISMTRACE_HOST || "https://api.prism.blockconvey.com";
 
 const SYSTEM = `You are a stock research analyst that shows its work.
 Rules:
@@ -19,7 +17,8 @@ const money = (n) => (typeof n === "number" ? n.toLocaleString("en-US") : "no da
 
 async function buildData() {
   const blocks = [];
-  for (const ticker of Object.keys(COMPANIES)) {
+  const tickers = ["NVDA", "AMD", "MU", "TSM", "LRCX", "ASML", "AVGO", "INTC", "QCOM", "AMAT"];
+  for (const ticker of tickers) {
     try {
       const f = await fundamentals(ticker);
       if (f.status !== "ok") {
@@ -84,69 +83,27 @@ function readQuestion(body) {
   return "";
 }
 
-async function trace(question, answer, model, latencyMs, sessionId) {
-  if (!process.env.PRISMTRACE_API_KEY || !process.env.PRISMTRACE_PROJECT_ID) return "skipped";
-  try {
-    const r = await fetch(PRISM_HOST + "/api/traces", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-PRISMtrace-Key": process.env.PRISMTRACE_API_KEY },
-      body: JSON.stringify({
-        project_id: process.env.PRISMTRACE_PROJECT_ID,
-        model,
-        input_messages: [{ role: "user", content: question }],
-        output_message: answer,
-        latency_ms: latencyMs,
-        session_id: sessionId,
-      }),
-      signal: AbortSignal.timeout(5000),
-    });
-    return r.ok ? "sent" : `failed (${r.status})`;
-  } catch (err) {
-    return `failed (${err.message})`;
-  }
-}
-
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    res.status(405).json({ error: "POST a JSON body like {\"question\": \"...\"}" });
-    return;
-  }
-  const question = readQuestion(req.body).slice(0, 4000);
+  const question = (req.method === "GET" ? String(req.query?.question || "") : readQuestion(req.body)).slice(0, 4000);
   if (!question) {
-    res.status(400).json({ error: "No question found in the request body." });
+    res.status(400).json({ error: "No question found. POST {\"question\": \"...\"} or use ?question=" });
     return;
   }
   if (!process.env.NICRRON_API_KEY) {
     res.status(503).json({ error: "NICRRON_API_KEY is not set on the server yet." });
     return;
   }
-  const started = Date.now();
-  const data = await buildData();
-  let answer;
-  let model = MODEL;
   try {
-    const r = await fetch(NICRRON_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.NICRRON_API_KEY}` },
-      body: JSON.stringify({
-        model: MODEL,
-        temperature: 0,
-        messages: [
-          { role: "system", content: SYSTEM },
-          { role: "user", content: `DATA:\n${data}\n\nQUESTION: ${question}` },
-        ],
-      }),
-      signal: AbortSignal.timeout(45000),
+    const data = await buildData();
+    const sessionId = String(req.body?.session_id || req.headers["x-session-id"] || "stock-scorecard-chat");
+    const out = await ask({
+      system: SYSTEM,
+      user: `DATA:\n${data}\n\nQUESTION: ${question}`,
+      traceInput: question,
+      sessionId,
     });
-    const json = await r.json();
-    if (!r.ok) throw new Error(json?.error?.message || `Nicrron returned ${r.status}`);
-    answer = json.choices?.[0]?.message?.content || "";
-    model = json.model || MODEL;
+    res.status(200).json({ answer: out.text, model: out.model, prism_trace: out.prism, disclaimer: "Informational only. Not investment advice." });
   } catch (err) {
     res.status(502).json({ error: `Model call failed: ${err.message}` });
-    return;
   }
-  const sessionId = String(req.body?.session_id || req.headers["x-session-id"] || "stock-scorecard");
-  const prism = await trace(question, answer, model, Date.now() - started, sessionId);
-  res.status(200).json({ answer, model, prism_trace: prism, disclaimer: "Informational only. Not investment advice." });
 }

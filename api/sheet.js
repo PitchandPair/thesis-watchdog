@@ -4,6 +4,8 @@ import { fundamentals, recent8K, insiderActivity, findTags, COMPANIES } from "..
 import { buffett, graham, piotroski, DEFAULTS } from "../lib/calc.js";
 import { headlines, redditPosts } from "../lib/news.js";
 import { resolveCompany } from "../lib/sec.js";
+import { labelHeadlines } from "../lib/sentiment.js";
+import { hasModelKey } from "../lib/llm.js";
 
 const cell = (x) => {
   if (x === null || x === undefined) return "";
@@ -71,6 +73,24 @@ const builders = {
       }
     }
     return rows;
+  },
+  async news_sentiment(tickers) {
+    const header = ["ticker", "headline", "publisher", "published", "label", "reason", "source_url", "model", "prism_trace", "status", "data_gap"];
+    if (!hasModelKey()) return [header, ["", "", "", "", "", "", "", "", "", "no data", "The AI key is not set on the server yet."]];
+    const perTicker = await Promise.all(
+      tickers.map(async (t) => {
+        try {
+          const co = await resolveCompany(t);
+          const list = await headlines(t, co?.name);
+          if (!list.length) return [[t, "", "", "", "", "", "", "", "", "no data", "No headlines in the last 7 days."]];
+          const labeled = await labelHeadlines(t, co?.name, list);
+          return labeled.map((h) => [t, h.title, h.source, h.published, h.label, h.reason, h.url, h.model, h.prism, "ok", ""]);
+        } catch (err) {
+          return [[t, "", "", "", "", "", "", "", "", "no data", `Could not score: ${err.message}`]];
+        }
+      }),
+    );
+    return [header, ...perTicker.flat()];
   },
   async reddit(tickers) {
     const rows = [["ticker", "post_title", "subreddit", "upvotes", "comments", "published", "source_url", "status", "data_gap"]];
