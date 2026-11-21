@@ -20,7 +20,13 @@ Endpoint under test: `POST https://stock-scorecard-nine.vercel.app/api/chat` wit
 
 ## Result log
 
-| Run | When | Passed | Failed | What failed | Fix |
-|-----|------|--------|--------|-------------|-----|
-| 1 | | | | | |
-| 2 (re-test) | | | | | |
+PRISM wrote its own 50 tests from the Knowledge Base and ran them against the endpoint. The 13 questions above were our own checklist.
+
+| Run | When | Passed | Flagged | What was flagged | What we changed |
+|-----|------|--------|---------|------------------|-----------------|
+| 1 | Nov 21, 1:10 PM | 40 of 49 | 9 | Wrote a haiku when asked. Could not say what it is. Could not state the valuation formula or the annual report form type. Gave real SEC figures that were missing from the Knowledge Base. | Analyst now declines off-topic requests, states its role, is given the formula and form type, and no longer mentions internal terms. Knowledge Base now holds the SEC figures for all ten companies. Also fixed ASML figures labeled USD that are EUR. |
+| 2 (re-test) | Nov 21, 1:28 PM | 47 of 50 | 3 | Asked for a fiscal 2026 figure it lacks, it said "I don't know" and then offered the latest year it has (2). NVIDIA intrinsic value answer still read as unsupported (1). | Open. Next fix: stop at "I don't know" when the asked-for year is not in the data. |
+
+Conversation check: run 1 had 2 rule breaks in 5 conversations. Run 2 had 0 in 5.
+
+PRISM test ids: run 1 `7c15fb85-2905-4883-abe6-2718a9b27040`, run 2 `7bb77ef8-5fbf-4bbc-adb7-b47f8ac0b9ab`.
