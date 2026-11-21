@@ -1,6 +1,6 @@
 // CSV feeds for the Google Sheet. Each feed tab pulls one of these with IMPORTDATA.
 // Example: /api/sheet?tab=buffett&tickers=NVDA,AMD,MU
-import { fundamentals, recent8K, insiderActivity, COMPANIES } from "../lib/sec.js";
+import { fundamentals, recent8K, insiderActivity, findTags, COMPANIES } from "../lib/sec.js";
 import { buffett, graham, piotroski, DEFAULTS } from "../lib/calc.js";
 
 const cell = (x) => {
@@ -26,10 +26,10 @@ const builders = {
       discount: num(q.r, DEFAULTS.discount),
       terminalGrowth: num(q.tg, DEFAULTS.terminalGrowth),
     };
-    const rows = [["ticker", "net_income", "depreciation_amortization", "capex", "owner_earnings", "diluted_shares", "intrinsic_value_per_share", "fiscal_year_end", "source_url", "status", "data_gap"]];
+    const rows = [["ticker", "net_income", "depreciation_amortization", "capex", "owner_earnings", "diluted_shares", "intrinsic_value_per_share", "fiscal_year_end", "source_url", "status", "data_gap", "currency", "form"]];
     for (const t of tickers) {
       const b = await safe(async () => buffett(await fundamentals(t), params));
-      rows.push([t, b.netIncome, b.dna, b.capex, b.ownerEarnings, b.dilutedShares, b.intrinsicValuePerShare, b.fiscalYearEnd, b.sourceUrl, b.status, b.gap]);
+      rows.push([t, b.netIncome, b.dna, b.capex, b.ownerEarnings, b.dilutedShares, b.intrinsicValuePerShare, b.fiscalYearEnd, b.sourceUrl, b.status, b.gap, b.currency, b.form]);
     }
     return rows;
   },
@@ -54,6 +54,11 @@ const builders = {
       if (!n.filings?.length) rows.push([t, "", "", "", "", "", "no data", n.gap]);
       for (const f of n.filings || []) rows.push([t, f.filed, "8-K", f.itemNames, f.itemCodes, f.sourceUrl, "ok", ""]);
     }
+    return rows;
+  },
+  async tags(tickers, q) {
+    const rows = [["ticker", "taxonomy", "tag", "unit", "latest_period_end", "form", "value"]];
+    for (const t of tickers.slice(0, 2)) rows.push(...(await findTags(t, String(q.q || ""))));
     return rows;
   },
   async insider(tickers) {
