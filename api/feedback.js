@@ -27,11 +27,11 @@ export default async function handler(req, res) {
       const out = await readJob(String(q.snapshot || ""));
       if (!Array.isArray(out.json)) return res.status(200).json({ http: out.status, reply: out.json || out.text });
       if (q.raw === "1") return res.status(200).json(out.json.slice(0, 2));
-      const header = ["company", "overall_rating_out_of_5", "ceo_approval", "recommend_to_friend", "culture_rating", "work_life_rating", "review_count", "source_url", "collected", "status", "data_gap"];
+      const header = ["company", "stock_symbol", "ceo_rated", "overall_rating_out_of_5", "ceo_approval", "recommend_to_friend", "culture_rating", "work_life_rating", "review_count", "source_url", "collected", "status", "data_gap"];
       const rows = out.json.map((rec) => {
         const r = toRow(rec);
         const ok = r.overall !== "";
-        return [r.company, r.overall, r.ceoApproval, r.recommend, r.culture, r.workLife, r.reviews, r.url, r.collected, ok ? "ok" : "no data", ok ? "" : String(rec.error || rec.warning || "No rating in the record.")];
+        return [r.company, r.ticker, r.ceo, r.overall, r.ceoApproval, r.recommend, r.culture, r.workLife, r.reviews, r.url, r.collected, ok ? "ok" : "no data", ok ? "" : String(rec.error || rec.warning || "No rating in the record.")];
       });
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       return res.status(200).send([header, ...rows].map((r) => r.map(cell).join(",")).join("\n"));
